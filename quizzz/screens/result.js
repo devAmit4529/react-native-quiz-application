@@ -6,22 +6,35 @@ import loser from '../images/stickman-sleeping-on-desk.png';
 
 import {useRoute} from '@react-navigation/native';
 import Title from '../components/title';
-
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 const Result = ({navigation}) => {
   const route = useRoute();
   const result = route.params?.result;
+
+  const handleLogout = async () => {
+    try {
+      await GoogleSignin.revokeAccess();
+      await GoogleSignin.signOut();
+      // Optionally, navigate back to the Home screen after logout:
+      navigation.navigate('Home');
+    } catch (error) {
+      console.error(error);
+      // Handle potential errors here
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Title titleText="RESULT" />
       <Text style={styles.scoreValue}> {result}</Text>
       <View style={styles.bannerContainer}>
-        {result >= 25 && (
+        {result >= 20 && (
           <Image source={winner} style={styles.banner} resizeMode="contain" />
         )}
-        {result < 25 && result > 10 && (
+        {result < 20 && result > 5 && (
           <Image source={average} style={styles.banner} resizeMode="contain" />
         )}
-        {result <= 10 && (
+        {result <= 5 && (
           <Image source={loser} style={styles.banner} resizeMode="contain" />
         )}
       </View>
@@ -29,6 +42,9 @@ const Result = ({navigation}) => {
         style={styles.button}
         onPress={() => navigation.navigate('Home')}>
         <Text style={styles.buttonText}>HOME</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={handleLogout}>
+        <Text style={styles.buttonText}>Log out</Text>
       </TouchableOpacity>
     </View>
   );
