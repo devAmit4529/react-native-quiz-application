@@ -7,6 +7,11 @@ const Quiz = ({navigation}) => {
   const [options, setOptions] = useState([]);
   const [score, setScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null); // To track selected option
+  console.log('SELECTED', selectedOption);
+  const [correctAnswer, setCorrectAnswer] = useState(null);
+  console.log('CORRECT', correctAnswer);
+  const [quizHistory, setQuizHistory] = useState([]); // New state for history
 
   const shuffleArray = array => {
     for (var i = array.length - 1; i > 0; i--) {
@@ -24,14 +29,23 @@ const Quiz = ({navigation}) => {
     const data = await res.json();
     setQuestions(data?.results);
     setOptions(generateOptionsAndShuffle(data.results[0]));
+    setCorrectAnswer(decodeURIComponent(data?.results[0]?.correct_answer)); // Set the correct answer
     console.log('RESSSS', data.results[0]);
     setIsLoading(false);
   };
 
+  // const handleNextPress = () => {
+  //   setQuesNo(quesNo + 1);
+  //   setOptions(generateOptionsAndShuffle(questions[quesNo + 1]));
+  // };
+
   const handleNextPress = () => {
     setQuesNo(quesNo + 1);
+    setSelectedOption(null); // Reset selected option
     setOptions(generateOptionsAndShuffle(questions[quesNo + 1]));
+    setCorrectAnswer(decodeURIComponent(questions[quesNo + 1]?.correct_answer)); // Update correct answer
   };
+
   const handlePrevPress = () => {
     setQuesNo(quesNo - 1);
     setOptions(generateOptionsAndShuffle(questions[quesNo - 1]));
@@ -45,19 +59,37 @@ const Quiz = ({navigation}) => {
   };
 
   const handleSelectOption = _option => {
-    if (_option === questions[quesNo].correct_answer) {
+    setSelectedOption(_option); // Track selected option
+
+    const questionData = {
+      question: decodeURIComponent(questions[quesNo]?.question),
+      correctAnswer,
+      selectedOption: _option,
+    };
+
+    setQuizHistory([...quizHistory, questionData]);
+
+    if (_option === correctAnswer) {
       setScore(score + 3);
-    } else if (_option !== questions[quesNo].correct_answer) {
+    } else {
       setScore(score - 1);
     }
-    if (quesNo != 9) {
-      setQuesNo(quesNo + 1);
-      setOptions(generateOptionsAndShuffle(questions[quesNo + 1]));
-    }
-    if (quesNo === 9) {
-      navigation.navigate('Result', {result: score});
-    }
   };
+
+  // const handleSelectOption = _option => {
+  //   if (_option === questions[quesNo].correct_answer) {
+  //     setScore(score + 3);
+  //   } else if (_option !== questions[quesNo].correct_answer) {
+  //     setScore(score - 1);
+  //   }
+  //   if (quesNo != 9) {
+  //     setQuesNo(quesNo + 1);
+  //     setOptions(generateOptionsAndShuffle(questions[quesNo + 1]));
+  //   }
+  //   if (quesNo === 9) {
+  //     navigation.navigate('Result', {result: score});
+  //   }
+  // };
   useEffect(() => {
     getQuiz();
   }, []);
@@ -65,76 +97,71 @@ const Quiz = ({navigation}) => {
   return (
     <View style={styles.container}>
       {isLoading ? (
-        <View
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100%',
-          }}>
-          <Text style={{fontSize: 24, fontWeight: '500'}}>LOADING ...</Text>
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>LOADING ...</Text>
         </View>
       ) : (
         questions && (
           <View style={styles.parent}>
             <View style={styles.top}>
               <Text style={styles.question}>
-                Q.{quesNo + 1} {decodeURIComponent(questions[quesNo].question)}
+                Q.{quesNo + 1} {decodeURIComponent(questions[quesNo]?.question)}
               </Text>
             </View>
             <View style={styles.options}>
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={() => handleSelectOption(options[0])}>
-                <Text style={styles.option}>
-                  {decodeURIComponent(options[0])}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={() => handleSelectOption(options[1])}>
-                <Text style={styles.option}>
-                  {decodeURIComponent(options[1])}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={() => handleSelectOption(options[2])}>
-                <Text style={styles.option}>
-                  {decodeURIComponent(options[2])}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={() => handleSelectOption(options[3])}>
-                <Text style={styles.option}>
-                  {decodeURIComponent(options[3])}
-                </Text>
-              </TouchableOpacity>
+              {options.map((option, index) => {
+                const decodedOption = decodeURIComponent(option);
+                // console.log('DECODED', decodedOption);
+                const optionColor =
+                  selectedOption === decodedOption
+                    ? decodedOption === correctAnswer
+                      ? '#4CAF50'
+                      : '#F44336'
+                    : '#8d99ae';
+
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.optionButton,
+                      {backgroundColor: optionColor},
+                    ]}
+                    onPress={() => handleSelectOption(decodedOption)}
+                    disabled={selectedOption !== null} // Disable button after selection
+                  >
+                    <Text style={styles.option}>{decodedOption}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <View style={styles.bottom}>
-              {/* {quesNo <= 9 && (
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handlePrevPress}
-                disabled={quesNo == 0 ? true : false}>
-                <Text style={styles.buttonText}>Prev</Text>
-              </TouchableOpacity>
-            )} */}
               {quesNo < 9 && (
                 <TouchableOpacity
                   style={styles.button}
-                  onPress={handleNextPress}>
-                  <Text style={styles.buttonText}>SKIP</Text>
+                  onPress={handleNextPress}
+                  disabled={selectedOption === null} // Disable "Next" until an option is selected
+                >
+                  <Text style={styles.buttonText}>NEXT</Text>
+                </TouchableOpacity>
+              )}
+              {quesNo < 9 && (
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => navigation.navigate('Result', {result: score})}
+                  disabled={selectedOption === null} // Disable "Next" until an option is selected
+                >
+                  <Text style={styles.buttonText}>FINISH</Text>
                 </TouchableOpacity>
               )}
 
-              {quesNo == 9 && (
+              {quesNo === 9 && (
                 <TouchableOpacity
                   style={styles.button}
                   onPress={() =>
-                    navigation.navigate('Result', {result: score})
-                  }>
+                    navigation.navigate('Result', {result: score, quizHistory})
+                  }
+                  disabled={selectedOption === null} // Disable until an option is selected
+                >
                   <Text style={styles.buttonText}>GO TO RESULT</Text>
                 </TouchableOpacity>
               )}
@@ -195,5 +222,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#8d99ae',
     borderRadius: 12,
     paddingHorizontal: 12,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 24,
+    fontWeight: '500',
   },
 });

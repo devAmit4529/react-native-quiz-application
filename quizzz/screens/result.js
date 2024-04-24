@@ -10,7 +10,8 @@ import {GoogleSignin} from '@react-native-google-signin/google-signin';
 const Result = ({navigation}) => {
   const route = useRoute();
   const result = route.params?.result;
-
+  const quizHistory = route.params?.quizHistory; // New history array
+  console.log('QUIZ HISTORY', quizHistory);
   const handleLogout = async () => {
     try {
       await GoogleSignin.revokeAccess();
@@ -21,6 +22,11 @@ const Result = ({navigation}) => {
       console.error(error);
       // Handle potential errors here
     }
+  };
+
+  const handleViewResponses = () => {
+    // Navigate to a new screen that shows the quiz history
+    navigation.navigate('QuizHistory', {quizHistory});
   };
 
   return (
@@ -45,6 +51,12 @@ const Result = ({navigation}) => {
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={handleLogout}>
         <Text style={styles.buttonText}>Log out</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleViewResponses} // Navigate to the quiz history screen
+      >
+        <Text style={styles.buttonText}>VIEW RESPONSES</Text>
       </TouchableOpacity>
     </View>
   );
